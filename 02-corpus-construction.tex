@@ -1,0 +1,117 @@
+\section{Methodology}
+
+\subsection{Candidate paper generation}
+\label{sec:candidate-generation}
+
+Papers enter this study through a single, reusable candidate-generation pipeline, run
+once per side of the comparison, prior to the individual manual review documented in
+Section~\ref{sec:results-detail}.
+
+\subsubsection{Category-based corpus construction}
+\label{sec:category-corpus-construction}
+
+Every candidate paper on both sides is retrieved by a single, comprehensive pull
+against arXiv's own subject categories, with no keyword or search-term filtering of
+any kind. Each side is queried against a fixed set of ``home'' categories --- the
+categories where that side's research actually concentrates --- over a 2021-present
+submission-date window:
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Quantum Computing}: \texttt{quant-ph}, \texttt{cond-mat.supr-con},
+    \texttt{cond-mat.mes-hall}.
+    \item \textbf{Classical computing}: \texttt{cs.DS}, \texttt{cs.CC},
+    \texttt{cs.LG}, \texttt{cs.NA}, \texttt{cs.IT}, \texttt{cs.CR}, \texttt{cs.AR},
+    \texttt{cs.PL}, \texttt{cs.DC}, \texttt{cs.ET}, \texttt{eess.SY},
+    \texttt{eess.SP}, \texttt{physics.app-ph}.
+\end{itemize}
+
+These are each side's own home categories specifically, not the full set of
+categories either side's subject matter can ever touch --- e.g.\ the quantum side
+does not include \texttt{cs.LG}, since that would import the entire classical
+machine-learning literature into the quantum-side corpus. Because no keyword filter
+is applied within these categories, retrieval captures every paper in scope
+regardless of how its authors chose to phrase their own topic.
+
+\paragraph{Deep-pagination limit and fix.} arXiv's search API returns a hard error
+for any query offset at or beyond approximately 10{,}000 results, confirmed directly
+(an identical offset succeeds at 9{,}950 and fails at 10{,}000, 10{,}050, 20{,}000,
+and 30{,}000, independent of retry count or backoff) --- a structural ceiling in
+arXiv's own search backend, not a transient fault. Since both sides' full category
+pulls exceed this ceiling by a wide margin, retrieval recursively splits the
+submission-date range: a candidate date window is first probed for its total result
+count; a window safely under the ceiling is paginated directly, while a window still
+too large is split in half by date and each half is probed and paginated
+independently, continuing until every actual paginated request stays comfortably
+clear of the limit. This adapts automatically to uneven publication volume across
+time (recent months have far more submissions than 2021 months) rather than assuming
+a fixed window size that might still overflow for a heavy period.
+
+\paragraph{Result.} This procedure produces a complete candidate corpus of
+\textbf{109{,}321 quantum papers and 345{,}107 classical-computing papers}
+(454{,}428 papers total), verified free of duplicate arXiv identifiers on both sides.
+Table~\ref{tab:corpus-stats} reports these totals alongside current classification
+status.
+
+\subsubsection{Per-paper extraction and link discovery}
+\label{sec:candidate-list-gen}
+
+Every paper in a domain's corpus goes through the same deterministic extraction pass;
+nothing is pre-filtered or skipped at this stage, and nothing here decides which
+papers get read later.
+
+\paragraph{Extraction.} For each paper, the PDF is downloaded from arXiv, its full
+plain text is extracted (\texttt{pdftotext}), and its embedded hyperlink annotations
+are extracted separately (\texttt{pdftohtml}, run with image extraction disabled ---
+the corpus needs only text, and image extraction is unnecessary I/O and storage
+overhead at this scale). The PDF itself is deleted immediately afterward; only the
+extracted text and link list are retained, since keeping the full-corpus PDFs is not
+disk-feasible at this scale. Before pattern matching, the extracted text is
+\emph{flattened}: hyphenated words and URLs split across a PDF line break are
+rejoined, so a URL or DOI broken across a line wrap (e.g.\ \texttt{https:} at the end
+of one line, \texttt{//doi.org/...} at the start of the next) is still read as one
+continuous string.
+
+\paragraph{Link discovery.} The same pass that extracts a paper's text also finds
+every plausible data/code link in it, from three independent sources: (i) PDF
+hyperlink annotations and plain-text URLs matching \textasciitilde20 known data/code
+repository domains (GitHub, Zenodo, Figshare, OSF, Dryad, institutional
+research-data repositories, etc.); (ii) generic DOI and URL patterns scanned
+independently of nearby text, to catch a repository link with no availability phrase
+next to it; and (iii) proximity to \textasciitilde30 data/code-availability keyword
+phrases (e.g.\ \emph{data availab-}, \emph{deposited at}, \emph{openly available}),
+used only to flag where in the text a link or claim sits. Every paper's discovered
+links proceed to the next stage (Section~\ref{sec:extraction-classification}), where
+each one is independently checked --- not only for whether it resolves, but, for the
+platforms that matter most, whether it actually has data behind it. Distinguishing a
+genuine self-citation (e.g.\ an author linking their own prior repository) from a
+citation to an unrelated third-party tool is left to the verification and
+classification steps that follow, not decided here.
+
+\paragraph{Corpus size and classification status at time of writing.}
+\label{sec:corpus-size}
+
+Table~\ref{tab:corpus-stats} reports the current corpus size on each side and how
+many papers have completed the two-axis classification described in
+Section~\ref{sec:extraction-classification}.
+
+\begin{table}[htbp]
+\centering
+\caption{Corpus size and classification status by domain}
+\label{tab:corpus-stats}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+Domain & Corpus size & Classified so far \\
+\midrule
+Quantum & 109{,}321 & 3{,}472 \\
+Classical computing (CS) & 345{,}107 & 0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\raggedright\footnotesize
+Full-text extraction, link discovery, and classification
+(Sections~\ref{sec:candidate-list-gen} and~\ref{sec:extraction-classification}) are
+still in progress against the corpus reported above; per-domain results in this
+report will be updated as classification proceeds.
+
+\end{table}

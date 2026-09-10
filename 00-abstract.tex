@@ -1,0 +1,28 @@
+\begin{abstract}
+This report documents a single pipeline for comparing data-availability practices
+between quantum computing research and classical (``regular'') computing research:
+whether a paper relies on data external to itself, on data it generates itself, or
+both, and how completely and verifiably each was shared. Candidate papers for each
+side are retrieved directly from the relevant arXiv subject categories (quantum
+physics and computing categories for the quantum side; the corresponding
+computer-science categories for the classical side) over a fixed publication window,
+with no keyword filtering of any kind. An earlier, keyword-based retrieval approach
+was tried first and found to systematically miss papers that describe relevant work
+using different terminology than any fixed keyword list anticipates --- a structural
+limitation no amount of list-tuning can fully close --- so retrieval was switched to
+this comprehensive, category-based pull instead. The result is a complete candidate
+corpus of \textbf{109{,}321 quantum papers and 345{,}107 classical-computing papers}.
+Each candidate is screened for data/code-availability signal via a full-text scan and
+classified by a two-axis, six-case framework: external-data use and self-generated-data
+use are scored independently, each across six states ranging from directly accessible
+to claimed-but-unverifiable to not present at all. Because the comprehensive pull is
+not filtered by topic at retrieval time, a separate step also flags papers that are not
+really quantum-computing work at all (e.g.\ quantum-hardware papers about sensing
+rather than computation), so that the pull's breadth does not come at the cost of
+off-topic material in the final results. At the time of writing, 3{,}472 quantum
+papers have been classified under this framework, drawn from an earlier, smaller,
+keyword-curated subset built before retrieval was switched to full category-based
+coverage; the classical side has not yet been classified. Classifying the remainder of
+the now much larger corpus is a substantially bigger undertaking than the work
+completed so far, and is the natural next phase of this project.
+\end{abstract}

@@ -1,0 +1,36 @@
+# Large corpus/cache files -- essential to continue the pipeline, but too big for a
+# normal git push (several are over GitHub's 100MB per-file limit; the whole cache/
+# and most of data/ together are ~3.6GB). Transfer these separately -- see
+# SESSION_HANDOFF.md's "Getting the data" section.
+cache/
+data/*.jsonl
+data/*.xlsx
+
+# Small, current review outputs -- keep these in git even though the *.xlsx rule
+# above would otherwise exclude them.
+!data/quantum_axis_case_review.xlsx
+!data/cs_axis_case_review.xlsx
+
+# Legacy/superseded data outputs from the archived phase1-3 and pillar-era scripts
+# (scripts/unused_legacy/) -- small enough to fit, but not part of the current
+# pipeline's output, so excluded for the same reason those scripts were archived.
+data/*.csv
+!data/quantum_axis_case_review.csv
+!data/cs_axis_case_review.csv
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz

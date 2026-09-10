@@ -1,0 +1,77 @@
+\section{Summary of Observations}
+
+\subsection{Classical computing sample}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Case 3 (``named, not handed over'') is the modal outcome for Axis
+    A} in this sample: six of the papers that use external data cite it by name only,
+    leaving retrieval entirely to the reader.
+    \item \textbf{Only two papers achieve Case 2 on Axis A with the strongest form of
+    reproducibility} --- a direct, working link. Of these, only one (PDMarks) pins the
+    reference to an exact commit hash, guaranteeing a byte-identical copy regardless of
+    future changes to the upstream repository.
+    \item \textbf{Two papers make an explicit availability claim that does not hold up
+    under verification} (Case 5) or resolves only to a conditional promise rather than
+    an immediate path (Case 6). Both were only detected as such because the stated
+    access paths were independently checked rather than taken at face value ---
+    underscoring that a stated ``available at ...'' claim is not equivalent to verified
+    availability.
+    \item \textbf{Self-generated data (Axis B) is comparatively rare} in this sample
+    and, when present, is unevenly documented: one paper links its generator code
+    directly (Case 2), one paper describes its generation procedure but links nothing
+    (Case 3), and two papers leave their own generated output only conditionally or
+    unverifiably accessible (Cases 5 and 6).
+    \item \textbf{No paper in this sample returned Case 1 on both axes except the
+    purely mathematical optimization paper}, consistent with the expectation that
+    Case-1/Case-1 should be reserved for papers with no empirical component at all.
+\end{itemize}
+
+\subsection{Quantum computing sample}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Axis A is overwhelmingly Case 1 in this sample} --- thirteen of the
+    fourteen papers use no external dataset at all; the sole exception (the
+    transmon-design paper) names its external source (SQuADDS) without a direct link in
+    the reviewed text. This is the sharpest structural difference from the classical
+    sample, where external-data use (Cases 2--6 on Axis A) was the norm rather than the
+    exception.
+    \item \textbf{Axis B (self-generated data) is where nearly all the variation in this
+    sample lives}, since almost every paper reports its own newly fabricated,
+    measured, or simulated data. Eight of fourteen papers reach Case 2 (directly
+    accessible), consistent with a real, if inconsistently applied, community norm of
+    depositing experimental data to Zenodo or an institutional repository under a
+    formal ``Data availability'' heading.
+    \item \textbf{Partial releases (data linked, with additional data gated behind a
+    request) appear three times} (charge-parity detection, magnon squeezing, and,
+    differently, the CPMG-scaling paper's pending archival deposit) --- distinct from
+    the classical sample, where a request-only outcome (Case 6) was typically total
+    rather than partial.
+    \item \textbf{One paper's stated access path is a literal unassigned placeholder}
+    (\texttt{10.5061/dryad.XXXXXXXXX}) rather than a broken but once-valid link, a
+    distinct failure mode from the classical sample's 404'd GitHub URL: here the paper
+    was evidently submitted before the archival deposit was even created, not merely
+    before its retrieval was verified.
+    \item \textbf{Self-citation to a lab's own prior open-source tooling} (as opposed to
+    releasing new data specific to the paper at hand) appears in this sample (the
+    LLM-assisted-experiments paper, citing its own group's HAL/Grapher/QuICK releases)
+    and was also observed repeatedly in the broader superconducting-qubit review queue
+    beyond this fourteen-paper sample --- a citation style that reads, on first pass, like
+    a third-party tool reference and requires checking the citing lab's identity against
+    the repository owner to correctly attribute.
+\end{itemize}
+
+\subsection{Cross-domain comparison}
+
+Read together, the two samples suggest that the two computing communities structure
+their data-availability problem differently rather than simply exhibiting different
+overall care. The classical sample's difficulty is overwhelmingly an Axis A problem:
+papers routinely build on named, citable, but unlinked external benchmarks and
+datasets. The quantum sample's difficulty is instead concentrated in Axis B: since these
+papers almost always generate their own new experimental or simulated data, the
+practice being tested is not ``did you cite your source'' but ``did you actually deposit
+what you produced,'' and the sample shows a genuine, if partial and unevenly applied,
+norm of doing so (Case 2 on Axis B in 8/14 papers). A same-shape comparison across the
+full review queues, once both are fully verified, is needed before this observation can
+be treated as more than suggestive --- both samples reported here are small,
+non-random, hand-selected subsets chosen for outcome diversity rather than
+representativeness (see Limitations).

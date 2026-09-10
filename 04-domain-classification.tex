@@ -1,0 +1,71 @@
+\subsection{Scope classification}
+\label{sec:domain-classification}
+
+Independently of the two-axis availability judgment above, every paper is also
+checked for whether it is genuinely in scope for this study at all --- a separate
+judgment from the arXiv category under which a paper was retrieved
+(Section~\ref{sec:category-corpus-construction}), or from any keyword signal found
+near it. Neither of those signals constitutes genuine content judgment: retrieval
+reflects only which category a paper was filed under, and the full-text availability
+scan (Section~\ref{sec:candidate-list-gen}) only checks for substring presence, not
+whether a paper is actually about the topic in question.
+
+This matters specifically on the quantum side, where \texttt{quant-ph} as an arXiv
+category covers all of quantum physics, not just quantum computing ---
+quantum sensing, quantum foundations, quantum optics, and quantum networking all live
+there too, alongside quantum computing itself. A paper using quantum hardware to
+detect a gravitational wave, for instance, is not a quantum computing paper merely
+because it involves qubits: the qubit is acting as a sensor, not executing a
+computation, and the paper's contribution is a physical measurement, not an advance in
+computing capability (see Section~\ref{sec:results-detail} for further discussion of
+this distinction). The category-based corpus-construction procedure
+(Section~\ref{sec:category-corpus-construction}) is deliberately kept broad
+(maximizing recall, per the same design principle already applied to the full-text
+availability scan in Section~\ref{sec:candidate-list-gen}) rather than pre-filtered
+for this distinction at pull time, so this check is deferred to a dedicated
+classification step instead of narrowing the query and losing volume.
+
+Scope classification is performed with the same reading depth and per-paper judgment
+as the availability classification (Section~\ref{sec:framework}), not a reduced or
+heuristic pass: an agent reads a paper's extracted text (or digest, at full-corpus
+scale, per Section~\ref{sec:extraction-classification}) and judges whether the paper
+is genuinely quantum computing research, or falls into one of the specific
+non-computing categories already established earlier in this project for exactly this
+problem: \emph{Atomic Physics}, \emph{Quantum Sensing}, \emph{Quantum Magnonics},
+\emph{Quantum Optomechanics}, \emph{Photonic Quantum Computing}, \emph{Trapped-Ion
+Computing}, \emph{Neutral-Atom Computing}, \emph{Semiconductor Spin Qubits}, and
+\emph{High Energy Physics}, plus a general \emph{Not Quantum Computing} fallback for a
+paper that does not fit any of the above. A paper assigned one of these labels is
+retained in the corpus (so that corpus size and candidate-generation yield remain
+auditable) but excluded from every subsequent quantum-computing-specific statistic in
+this report. No equivalent out-of-scope category set is currently defined on the CS
+side; whether CS's broad pull similarly needs an out-of-scope carve-out remains an
+open question.
+
+For papers not yet classified for availability, this judgment is obtained in the same
+pass as the Axis A/Axis B classification --- the same read of the paper's text yields
+both judgments, avoiding a second full read-through of the corpus. For the 3{,}472
+quantum papers already classified for availability before this scope-classification
+methodology was adopted (Table~\ref{tab:corpus-stats}), a separate backfill pass adds
+only the scope judgment, at the same rigor as if it had been obtained in the combined
+pass; their existing Axis A/Axis B classification, evidence, and confidence fields are
+left unmodified. This backfill is implemented as its own reusable script, applying the
+same deterministic-extraction-plus-agent-classification pattern already established
+for availability classification, so that scope classification can be independently
+re-run in the future without requiring the availability judgment to be redone. As of
+this writing, this methodology has been designed, but neither the backfill pass over
+the 3{,}472 already-classified quantum papers nor the combined-pass classification of
+the CS corpus has yet been executed.
+
+\subsection{Scope note}
+% NOTE: this subsection previously contrasted the hand-reviewed pilot table against
+% full-corpus progress; the pilot table has since been removed in favor of the
+% aggregate-results blueprint (Section~\ref{sec:results-aggregate}), so most of the
+% original point here is now moot. Left in only for the still-relevant provenance/
+% cross-validation caveat below -- consider deleting this subsection entirely.
+The extraction-verification-classification pipeline (Section~\ref{sec:extraction-classification})
+is intended for scaling classification to the full corpus in each domain
+(Table~\ref{tab:corpus-stats}). As of this writing, it has been run against a
+3{,}478-paper quantum sample, with 3{,}472 of those papers classified
+(Table~\ref{tab:corpus-stats}); this is, in either case, a single-pass review that has
+not yet been cross-validated by a second reviewer.

@@ -1,0 +1,22 @@
+\section{Introduction}
+
+Reproducibility audits of empirical research papers typically ask a single question ---
+``is the data available?'' --- that conflates several distinct concerns: whether any
+data was used at all, whether that data came from outside the paper or was produced by
+the paper's own procedure, and whether what was used was actually handed to the reader
+in a verifiable form. A paper can use data drawn from outside itself, data its own code
+or experiment produces, both, or neither, and each of these can in turn be handed over
+completely, named but not shared, shared incompletely, claimed as shared but
+unreachable, or shared only conditionally on request. Collapsing all of this into one
+yes/no judgment obscures which of these situations a given paper is actually in. This
+report describes a single pipeline that separates those concerns into a two-axis
+classification scheme --- whether external data is used, and whether self-generated
+data is used, each independently scored across six possible states of availability.
+The pipeline retrieves a complete candidate corpus directly from arXiv's own subject
+categories for each side of an ongoing comparison of data-availability practices
+between quantum computing research and classical computing research, screens every
+candidate paper for data/code-availability signal, and classifies each one under the
+two-axis framework. The pipeline that generates and screens candidate papers is
+described in Section~\ref{sec:candidate-generation}; the classification framework
+itself, and its output on a pilot sample drawn from each side's review queue, occupy
+the remainder of this report.

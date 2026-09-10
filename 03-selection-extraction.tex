@@ -1,0 +1,105 @@
+\subsection{Selection of papers for the detailed review in this report}
+Two samples of fourteen papers each are individually reviewed in
+Section~\ref{sec:results-detail}: a classical-computing sample selected from the CS-side
+review queue described above, and a quantum-computing sample selected from the
+quantum review queue, chosen to span a comparable range of outcomes ---
+directly-linked data, named-but-unlinked data, request-conditional access, and
+unresolvable or not-yet-live links --- so that the two samples are a fair basis for
+qualitative comparison despite their small size. Each paper, in both samples, was
+processed independently as follows.
+
+\subsection{Extraction, link verification, and classification}
+\label{sec:extraction-classification}
+
+Once a paper is selected from a domain's corpus (Section~\ref{sec:candidate-list-gen}),
+it passes through extraction and live link verification, classification, and
+review-CSV construction before it appears in the aggregate results
+(Section~\ref{sec:results-aggregate}). These steps are implemented as two scripts plus
+one non-scripted classification step, described in turn below.
+
+\paragraph{Extraction and live link verification (scripted).} A dedicated
+script reuses the plain text already cached by the link-discovery step
+(Section~\ref{sec:candidate-list-gen}) wherever available, avoiding a second download
+of the same PDF; a paper not previously scanned is downloaded and extracted fresh using
+the same procedure. Every link previously extracted for that paper is then
+independently re-checked over HTTP (a HEAD request, falling back to a small ranged GET
+for servers that reject HEAD), and classified as resolving, returning an error, or
+timing out. Every paper in a domain's corpus goes through this step, so a paper that
+uses external data without ever using an availability keyword or including a link is
+still fully re-checked here. The
+result of this step is one pending record per paper, containing the full extracted
+text, the live link-verification results, and the classification fields left unset.
+
+\paragraph{Batching for full-corpus scale (scripted preprocessing, not classification
+itself).} At full-corpus scale, a paper's extracted text is too large to read in bulk
+without either truncating it or exceeding practical per-request limits (a single
+paper's text ranges from roughly 25{,}000 to over 500{,}000 characters). Two scripted
+steps address this without changing what is actually classified. First, the pending
+records for a batch of papers are condensed into a digest: papers short enough to read
+whole are left as-is; longer papers are reduced to their opening excerpt (title,
+abstract, and introduction, where a paper's external data sources are typically first
+named), their closing excerpt (references and, commonly, a formal data-availability
+statement), and a window of text around every occurrence of a data/code-availability
+keyword found elsewhere in the paper, so a relevant sentence in the middle of a long
+paper is not missed by only keeping the ends. Classification is performed from this
+digest plus the unmodified link-verification results, on the same basis it would be
+performed from the full text --- the digest changes how much text is read, not what is
+asked of it or how it is judged. Second, once a batch is classified, a separate script
+writes the classification fields onto a copy of the paper's original, complete record
+(full extracted text and link-verification results, unmodified), so the digest is
+never what persists in the cache; it is a reading aid discarded after use.
+
+\paragraph{Classification (agent-driven, not a scripted API call).} The two-axis,
+six-case framework (Section~\ref{sec:framework}) is defined in exactly one place --- a
+single framework document --- and every classification, whether performed by a person
+or by an automated agent, is required to read that same document rather than work from
+a separately maintained copy, so that the framework's definitions cannot drift out of
+sync between where they are documented and how they are actually applied. Concretely,
+classification in this project is performed by a Claude Code agent: for each pending
+record, the agent reads the framework document together with that paper's extracted
+text and link-verification results, and assigns an Axis A case, an Axis B case, a
+short evidence quote for each, a confidence level, and a flag indicating whether the
+assignment should be treated as provisional pending future human confirmation. This
+step is deliberately not implemented as a scripted, fire-and-forget call to a hosted
+language-model API: the extraction script stops at extraction and verification only,
+and classification instead runs as a supervised agent process --- one that is paused,
+corrected, and resumed batch by batch, rather than an unattended pipeline with no point
+of judgment in the loop. As of this writing, every classification produced this way has
+been performed by the agent alone.
+
+\paragraph{Distinguishing the paper's own data/code link from an unrelated citation.}
+A paper can contain many links that have nothing to do with its own data or code ---
+a citation to a library it used, a link to a related paper, a reference to a
+co-author's unrelated prior work. Link discovery (Section~\ref{sec:candidate-list-gen})
+does not filter for this: it collects every candidate link, DOI, and URL in the paper
+regardless of what it points to. Deciding which of those links, if any, is actually
+the paper's own data/code artifact is not a separate rule-based step; it is made by
+the classifying agent as part of the same read that assigns each case, using the same
+surrounding text a human reviewer would rely on: a link's ownership is judged from the
+sentence or paragraph it appears in (``our code is available at...'' versus ``we used
+the Qiskit library [12]''), from whether it sits under an explicit data/code-
+availability statement, and from whether the paper's own text claims the linked
+resource as its own contribution rather than citing it as a tool or related work. No
+separate attribution rule exists in the pipeline for this judgment; it is treated as
+ordinary reading comprehension, the same as a human reviewer would apply, rather than
+a distinct classification rule.
+
+\paragraph{Review CSV construction (scripted).} A second script joins the
+classification output back against the domain's paper-list metadata (title, authors,
+publication date) and writes one CSV per domain, with human-readable case labels,
+the evidence quotes, the link-verification outcomes, and a blank verification column.
+
+\paragraph{Sequential batch processing.} Batches are classified sequentially rather
+than concurrently: this trades wall-clock time for the property that a failure
+partway through affects only the batch in progress rather than all of them at once,
+and work already merged from completed batches is retained regardless of what happens
+to a later one.
+
+\paragraph{Human verification.} No agent-produced classification is treated as
+final on its own. Every row is written with its verification column blank; a human
+reviewer subsequently confirms or overrides each case assignment, following the same
+convention already in use elsewhere in this project's review queues (verification
+status recorded separately from the label itself, so the two are never conflated).
+This mirrors the project's broader design principle, applied consistently from the
+candidate-generation stage onward: an ambiguous or low-confidence signal is flagged for
+review rather than silently resolved one way or the other.

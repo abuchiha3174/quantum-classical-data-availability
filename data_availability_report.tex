@@ -1,0 +1,927 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{enumitem}
+
+\title{Comparing Data Availability in Quantum and Classical Computing Research:\\
+A Single Two-Axis, Six-Case Classification Pipeline}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report documents a single pipeline for comparing data-availability practices
+between quantum computing (superconducting-qubit) research and classical
+(``regular'') computing research: whether a paper relies on data external to itself,
+on data it generates itself, or both, and how completely and verifiably each was
+shared. The pipeline is defined once and configured with a set of subject-matter
+pillars and keyword definitions for each side of the comparison; it builds a
+per-pillar candidate corpus from the arXiv API for each side, screens every candidate
+via a full-text scan for data/code-availability signal, and classifies each paper by a
+two-axis, six-case framework. A separate, independently-judged classification
+determines each paper's true subject pillar, correcting for the fact that the pillar
+under which a paper was originally searched need not reflect what the paper's content
+is actually about. This report also documents two corpus-construction defects
+discovered and corrected during this study --- a silent 100-result-per-keyword
+truncation in the arXiv query step, and a systematic undercount in the
+classical-computing keyword list caused by generic descriptive phrases (e.g.\
+``machine learning algorithm'') that do not match how the literature actually names
+its own methods --- together with the fixes adopted for each. At the time of writing,
+3{,}472 of 3{,}478 quantum-side papers have completed the two-axis classification; the
+classical-side corpus (6{,}308 papers, pulled after the truncation fix but before the
+keyword-list rework) has not yet been classified. A worked pilot sample of fourteen
+papers per side, classified by hand prior to the scaled pipeline described here, is
+reported in Section~\ref{sec:results-detail} as an illustration of the framework; full
+results for both sides of the comparison, and the corpus-construction diagnostic
+tables referenced above, will be added to this report once classification of the
+corrected, full-breadth corpora is complete.
+\end{abstract}
+
+\section{Introduction}
+
+Reproducibility audits of empirical research papers typically ask a single question ---
+``is the data available?'' --- that conflates several distinct concerns: whether any
+data was used at all, whether that data came from outside the paper or was produced by
+the paper's own procedure, and whether what was used was actually handed to the reader
+in a verifiable form. A paper can use data drawn from outside itself, data its own code
+or experiment produces, both, or neither, and each of these can in turn be handed over
+completely, named but not shared, shared incompletely, claimed as shared but
+unreachable, or shared only conditionally on request. Collapsing all of this into one
+yes/no judgment obscures which of these situations a given paper is actually in. This
+report describes a single pipeline that separates those concerns into a two-axis
+classification scheme --- whether external data is used, and whether self-generated
+data is used, each independently scored across six possible states of availability.
+The pipeline is defined once, independent of subject matter, and configured with a set
+of subject-matter pillars and keyword definitions for each side of an ongoing
+comparison of data-availability practices between quantum computing
+(superconducting-qubit) research and classical computing research, giving one
+independently-built corpus and classification output per side of that comparison. The
+pipeline that generates and screens candidate papers is described in
+Section~\ref{sec:candidate-generation}; the classification framework itself, and its
+output on a pilot sample drawn from each side's review queue, occupy the remainder of
+this report.
+
+\section{Methodology}
+
+\subsection{Candidate paper generation}
+\label{sec:candidate-generation}
+
+The papers reviewed in this pass were drawn from an existing, larger
+candidate-generation pipeline: a single, reusable procedure, run once per side of a
+broader thesis comparing data-availability practices between quantum computing and
+classical (``regular'') computing research. That pipeline is summarized here because
+it determines how papers entered the review queue in the first place, prior to the
+individual manual review documented in Section~\ref{sec:results-detail}.
+
+\subsubsection{Domain structure}
+Both sides of the comparison organize their papers into six mirrored pipeline-stage
+\emph{pillars}, so that each quantum research stage has a same-shape classical
+counterpart (full topic and arXiv-category mappings are maintained centrally in a
+domain-definitions module):
+
+\begin{table}[htbp]
+\centering
+\caption{Mirrored pillar structure, quantum vs.\ classical computing}
+\label{tab:pillars}
+\begin{tabular}{@{}p{4.7cm} p{6.8cm}@{}}
+\toprule
+Quantum pillar & Classical (CS) mirror \\
+\midrule
+Hardware (superconducting qubits, transmons, fabrication) & Classical Hardware (CMOS/fabrication) \\
+Control \& Operations & Classical Control \& Operations \\
+Error Correction & Coding Theory \\
+Algorithms & Classical Algorithms \\
+Compilation \& Circuit Optimization & Compiler \& Circuit Optimization \\
+Information Theory & Classical Information Theory \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both sides of the comparison have all six pillars populated. On the quantum side, the
+Hardware pillar is the one exception to the common construction procedure below: it
+reuses an existing, separately-built dataset (Section~\ref{sec:quantum-list-gen}) built
+before the six-pillar comparison architecture existed, rather than being queried by
+the common procedure. Every other pillar on both sides --- including CS's own Hardware
+pillar, which has no equivalent reused dataset and is queried the same way as every
+other CS pillar --- is built by the common per-pillar arXiv query procedure
+(Section~\ref{sec:pillar-corpus-construction}). This asymmetry is a known
+inconsistency in the current pipeline, not a deliberate design choice; a planned
+extension to resolve it is described in
+Section~\ref{sec:planned-extensions}. The classical-computing pilot sample
+(Table~\ref{tab:results-cs}) spans several of these pillars --- cryptography and
+hardware architecture, compiler and circuit optimization, machine learning, and
+algorithms --- while the quantum pilot sample (Table~\ref{tab:results-quantum}) is
+drawn entirely from the Hardware pillar.
+
+\subsubsection{Quantum list generation}
+\label{sec:quantum-list-gen}
+
+The superconducting-qubit corpus was built as a two-source pull, combining arXiv
+preprints with journal publications not cross-listed on arXiv, then deduplicated into a
+single list.
+
+\paragraph{arXiv source.} Papers were retrieved from the arXiv API using a
+title/abstract keyword match on \texttt{"superconducting qubit"} or
+\texttt{"superconducting qubits"}, restricted to three arXiv categories
+(\texttt{quant-ph}, \texttt{cond-mat.supr-con}, \texttt{cond-mat.mes-hall}), and
+restricted to a submission-date window of 2021-01-01 through the present (a
+\textasciitilde5-year window, chosen to keep the corpus current while remaining
+tractable for a manual/LLM-assisted review pipeline). Results were paginated (100
+records per request) and fetched with a politeness delay between requests per arXiv's
+API guidelines.
+
+\paragraph{Journal source (Crossref).} Because not every published paper in this area is
+cross-listed on arXiv, a second pass queried the Crossref API with a bibliographic
+search for \texttt{"superconducting qubit"}, restricted to the same date window and to
+seven target journals: \emph{PRX Quantum}, \emph{npj Quantum Information},
+\emph{Nature Physics}, \emph{Quantum}, \emph{Physical Review Letters}, \emph{Physical
+Review A}, and \emph{Physical Review B}. Crossref's bibliographic search is a loose
+relevance match rather than an exact-phrase filter, so the raw pull (1{,}880 hits, at
+the most recent corpus rebuild) included a substantial fraction of off-topic
+condensed-matter and general-physics results; a secondary title-relevance filter
+(requiring the word ``qubit'' together with a superconducting-qubit-type term in the
+title) removed 1{,}610 of these before merging.
+
+\paragraph{Deduplication and merge.} The two sources were merged by normalized,
+fuzzy-matched title comparison (a similarity threshold applied via sequence matching):
+171 Crossref records matched an existing arXiv entry and were merged into that row
+(adding venue/DOI metadata rather than creating a duplicate row); 99 Crossref records
+had no arXiv match and were kept as journal-only rows. The resulting corpus totals
+\textbf{1{,}485 papers} (1{,}386 arXiv-native $+$ 99 journal-only) as of the most recent
+rebuild of this corpus; the sample reviewed in Section~\ref{sec:results-quantum} was
+drawn from an earlier snapshot of this same pipeline (1{,}478 papers, 1{,}379
+arXiv-native $+$ 99 journal-only), and the small difference between the two counts
+reflects newly published papers accumulating between the two pulls rather than any
+change in query or methodology.
+
+\subsubsection{Pillar-based corpus construction (all pillars beyond Hardware)}
+\label{sec:pillar-corpus-construction}
+
+The five quantum pillars beyond Hardware, and all six CS pillars, are built by a
+second, common procedure rather than the Crossref-augmented pipeline described above:
+for every keyword defined for a pillar (topic and keyword lists are maintained
+centrally in a domain-definitions module, one list per pillar per side), the arXiv API
+is queried with a title/abstract exact-phrase match on that keyword, restricted to the
+pillar's configured arXiv categories and the same 2021-present date window used
+throughout this study, and the results for all of a pillar's keywords are merged and
+deduplicated by arXiv identifier into one list per pillar; the six per-pillar lists on
+a side are then merged and deduplicated again into that side's combined corpus.
+
+\paragraph{Truncation defect and fix.} As originally implemented, each keyword query
+retrieved only the first 100 results (arXiv's default single-page response), with no
+pagination beyond that. This was found, during this study, to silently truncate any
+keyword whose true match count exceeds 100 --- discovered by separately querying
+arXiv's own reported \texttt{totalResults} count for every keyword on both sides,
+which is not otherwise inspected by the pipeline. Several keywords were found to have
+true totals in the thousands (e.g.\ ``quantum machine learning'': 1{,}668 true matches
+against 100 previously retrieved; ``optimization algorithm'': 2{,}446 against 100), so
+the original single-page implementation was retaining as little as 9--15\% of a
+pillar's true candidate population in the worst-affected pillars (quantum
+\emph{Algorithms} and \emph{Information Theory}; CS \emph{Algorithms}). The query
+procedure was corrected to paginate every keyword query to its full reported total
+rather than stopping at the first page, using the same page-size and politeness-delay
+conventions already established elsewhere in this pipeline. This fix has been applied
+to the CS-side pull (Section~\ref{sec:corpus-size}); the quantum-side pillars beyond
+Hardware have not yet been re-pulled with the corrected procedure as of this writing.
+
+\subsubsection{Keyword-list rework}
+\label{sec:keyword-rework}
+
+Correcting the truncation defect above exposed a second, independent problem that the
+100-result cap had been masking: several CS keywords are generic, multi-word
+descriptive phrases (e.g.\ \texttt{"machine learning algorithm"},
+\texttt{"search algorithm complexity"}) that do not match how the literature they are
+meant to capture actually names its own work. \texttt{"machine learning algorithm"}
+returns 2{,}117 true matches, a small fraction of the true scale of the ML literature
+on arXiv (well over 100{,}000 papers in \texttt{cs.LG} alone since 2021) --- not
+because the pagination fix above failed, but because almost no machine-learning paper
+literally contains that three-word phrase in its title or abstract; papers instead name
+their specific method (``a transformer architecture for...'', ``a reinforcement
+learning approach to...''). This is a phrasing problem, not a volume problem, and no
+amount of additional pagination corrects it. By contrast, keyword lists built from
+canonical, specific named techniques --- as most of the quantum-side list already is
+(``Shor's algorithm'', ``QAOA'') and as CS's \emph{Coding Theory} pillar already is
+(``LDPC code'', ``turbo code'', ``Reed-Solomon code'') --- do not exhibit this problem,
+because papers in those subfields consistently name the specific technique they use.
+
+The keyword lists on both sides were reworked on this basis: for pillars found to rely
+on generic descriptive phrasing, specific named methods/techniques were added
+alongside the existing keywords. No existing keyword was removed on either side ---
+even a narrow, low-yield keyword still returns genuine matches, so removing it can only
+lose valid coverage for no offsetting benefit. Table~\ref{tab:keyword-rework} lists
+every change; all additions are purely additive over the lists in place when the
+diagnostic pagination check above was run.
+
+\begin{table}[htbp]
+\centering
+\caption{Keyword-list rework (additions only; no keyword was removed on either side)}
+\label{tab:keyword-rework}
+\begin{tabular}{@{}l l p{7.3cm}@{}}
+\toprule
+Side & Pillar & Keywords added \\
+\midrule
+Quantum & Information Theory & quantum Shannon theory, entanglement entropy \\
+CS & Control \& Operations & model predictive control, adaptive control system \\
+CS & Coding Theory & polar code, convolutional code \\
+CS & Algorithms & convolutional neural network, transformer architecture, reinforcement
+learning, graph neural network, generative adversarial network, dynamic programming,
+approximation algorithm, combinatorial optimization \\
+CS & Information Theory & Shannon capacity, differential privacy, zero-knowledge proof \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All other pillars on both sides (quantum Hardware, Control, Error Correction,
+Algorithms, and Compilation; CS Hardware and Compiler \& Circuit Optimization) were
+left unchanged: their existing keywords are already specific, canonical technique
+names, and their true-total diagnostic did not show the generic-phrasing pattern
+described above. As of this writing, the reworked keyword lists have been written into
+the domain-definitions module but neither side's corpus has yet been re-pulled against
+them; Section~\ref{sec:corpus-size} therefore still reports corpus sizes from before
+this rework.
+
+\subsubsection{Candidate list generation}
+\label{sec:candidate-list-gen}
+
+Once a domain's paper list exists (from either the quantum or the CS-side procedure
+above), every paper in it is passed through a common data-availability screening step,
+producing the \emph{candidate list} that manual review subsequently draws from. This
+step is deliberately high-recall: per an explicit project requirement, the detector must
+never silently classify a paper as having no data if any plausible signal is present.
+False positives are an accepted cost of this design; false negatives are not.
+
+\paragraph{Extraction.} For each paper, the PDF is downloaded from arXiv, its full
+plain text is extracted (\texttt{pdftotext}), and its embedded hyperlink annotations
+are extracted separately (\texttt{pdftohtml}, run with image extraction explicitly
+disabled --- an early version of this step, run without that flag, silently dumped
+every embedded figure as a separate image file, producing tens of thousands of stray
+files before the fix). The PDF itself is deleted immediately afterward; only the
+extracted text and link list are retained, since keeping the full-corpus PDFs was not
+disk-feasible at this scale. Before pattern matching, the extracted text is
+\emph{flattened}: hyphenated words and URLs split across a PDF line break are rejoined,
+since an early version of the detector was found to miss valid links and DOIs broken
+across a line wrap (e.g.\ \texttt{https:} at the end of one line, \texttt{//doi.org/...}
+at the start of the next).
+
+\paragraph{Signal detection.} Three independent signal sources are checked against the
+flattened text: (i) a curated list of \textasciitilde30 data/code-availability
+keyword phrases (e.g.\ \emph{data availab-}, \emph{code availab-}, \emph{available
+upon}, \emph{deposited at}, \emph{openly available}, \emph{github repository}); (ii) a
+list of \textasciitilde20 known data/code repository domains (GitHub, Zenodo, Figshare,
+OSF, Dryad, institutional research-data repositories, etc.) checked against both PDF
+hyperlink annotations and plain-text URLs; and (iii) generic DOI and URL regular
+expressions scanned independently of nearby keywords, to catch a repository link that
+appears without an explicit availability phrase nearby. A paper triggering any of these
+three signals is labeled \emph{Candidate}; a paper triggering none is labeled \emph{No
+candidate}. This is a binary triage, not a final classification --- it deliberately
+does not attempt to distinguish a genuine self-citation (e.g.\ an author linking their
+own prior repository) from a citation to an unrelated third-party tool, since that
+distinction is left to the manual review step.
+
+\paragraph{Corpus size and classification status at time of writing.}
+\label{sec:corpus-size}
+
+Table~\ref{tab:corpus-stats} reports the current pillar-corpus size on each side (all
+six pillars combined) and how much of that corpus has completed the two-axis
+classification described in Section~\ref{sec:extraction-classification}, as distinct
+from the smaller, now-outdated candidate-count snapshot this table reported in earlier
+drafts of this report.
+
+\begin{table}[htbp]
+\centering
+\caption{Pillar-corpus size and classification status by domain, all six pillars}
+\label{tab:corpus-stats}
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+Domain & Corpus size & Classified (Axis A/B) & Pending \\
+\midrule
+Superconducting qubits (quantum) & 3{,}478 & 3{,}472 (99.8\%) & 6 \\
+Classical computing (CS, all six pillars) & 6{,}308 & 0 (0\%) & 6{,}308 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\raggedright\footnotesize
+The quantum figure reflects the pillar corpus as originally pulled, before either
+corpus-construction fix in Sections~\ref{sec:pillar-corpus-construction}
+and~\ref{sec:keyword-rework}; a re-pull incorporating both fixes is planned but had not
+been executed as of this writing, and is expected to substantially increase this
+corpus's size (a raw, pre-deduplication estimate places the corrected quantum corpus
+at approximately 13{,}800--14{,}000 papers). Of the 6 quantum papers not yet
+classified, all 6 failed PDF text extraction at the full-text-scan stage
+(Section~\ref{sec:candidate-list-gen}) rather than being unclassifiable for any
+framework-related reason; re-extraction has not yet been attempted. The CS figure
+already reflects the pagination fix (Section~\ref{sec:pillar-corpus-construction}) but
+not yet the keyword-list rework (Section~\ref{sec:keyword-rework}); classification of
+this corpus had not yet begun as of this writing. Per-pillar corpus-size breakdowns for
+both domains, and the true-total diagnostic table that motivated the two fixes above,
+will be added to this report once the corrected, full-breadth corpora are pulled.
+
+\end{table}
+
+\subsection{Selection of papers for the detailed review in this report}
+Two samples of fourteen papers each are individually reviewed in
+Section~\ref{sec:results-detail}: a classical-computing sample selected from the CS-side
+review queue described above, and a quantum-computing sample selected from the
+superconducting-qubit review queue, chosen to span a comparable range of outcomes ---
+directly-linked data, named-but-unlinked data, request-conditional access, and
+unresolvable or not-yet-live links --- so that the two samples are a fair basis for
+qualitative comparison despite their small size. Each paper, in both samples, was
+processed independently as follows.
+
+\subsection{Extraction, link verification, and classification}
+\label{sec:extraction-classification}
+
+Once a paper is selected from a domain's review queue (Section~\ref{sec:candidate-list-gen}),
+it passes through three further stages before it appears in Table~\ref{tab:results-cs}
+or Table~\ref{tab:results-quantum}. These stages are implemented as two scripts plus one
+non-scripted classification step, described in turn below.
+
+\paragraph{Stage 3: extraction and live link verification (scripted).} A dedicated
+script reuses the plain text already cached by the candidate-generation step
+(Section~\ref{sec:candidate-list-gen}) wherever available, avoiding a second download
+of the same PDF; a paper not previously scanned is downloaded and extracted fresh using
+the same procedure. Every link previously extracted for that paper is then
+independently re-checked over HTTP (a HEAD request, falling back to a small ranged GET
+for servers that reject HEAD), and classified as resolving, returning an error, or
+timing out. This is the automated counterpart of the manual link-checking used earlier
+in this project's pilot review --- the same kind of check that identified a claimed
+GitHub repository returning a 404 and confirmed a code repository's stated pre-release
+embargo. The result of this stage is one pending record per paper, containing the full
+extracted text, the live link-verification results, and the classification fields left
+unset.
+
+This stage can be run in either of two scopes. The narrower scope processes only the
+papers Stage 2 already flagged as Candidates; this is cheaper but inherits Stage 2's
+blind spot (Section~\ref{sec:candidate-list-gen}) --- a paper that uses external data
+without ever using an availability keyword or including a link is a Candidate-scope
+false negative for Axis A. The broader scope processes every paper in the domain's
+corpus regardless of its Stage 2 label, closing that gap at the cost of extracting and
+verifying a larger set. For the quantum-side corpus, the broader scope was used, so
+Stage 3's output covers all 3{,}478 papers across all six pillars, not only the subset
+Stage 2 flagged.
+
+\paragraph{Stage 4 batching (scripted preprocessing, not classification itself).} At
+full-corpus scale, a paper's extracted text is too large to read in bulk without either
+truncating it or exceeding practical per-request limits (a single paper's text ranges
+from roughly 25{,}000 to over 500{,}000 characters, and the full quantum Stage 3 output
+totals several hundred megabytes). Two scripted steps address this without changing what
+is actually classified. First, the pending records for a batch of papers are condensed
+into a digest: papers short enough to read whole are left as-is; longer papers are
+reduced to their opening excerpt (title, abstract, and introduction, where a paper's
+external data sources are typically first named), their closing excerpt (references and,
+commonly, a formal data-availability statement), and a window of text around every
+occurrence of a data/code-availability keyword found elsewhere in the paper, so a
+relevant sentence in the middle of a long paper is not missed by only keeping the ends.
+Classification is performed from this digest plus the unmodified link-verification
+results, on the same basis it would be performed from the full text --- the digest
+changes how much text is read, not what is asked of it or how it is judged. Second,
+once a batch is classified, a separate script writes the classification fields onto a
+copy of the paper's original, complete record (full extracted text and link-verification
+results, unmodified), so the digest is never what persists in the domain's cache; it is
+a reading aid discarded after use.
+
+\paragraph{Stage 4: classification (not a scripted API call).} The two-axis, six-case
+framework (Section~\ref{sec:framework}) is defined in exactly one place --- a single
+framework document --- and every classification, whether performed by a person or by an
+automated agent, is required to read that same document rather than work from a
+separately maintained copy, so that the framework's definitions cannot drift out of
+sync between where they are documented and how they are actually applied. Concretely,
+classification in this project is performed by a Claude Code agent: for each pending
+record produced by Stage 3, the agent reads the framework document together with that
+paper's extracted text and link-verification results, and assigns an Axis A case, an
+Axis B case, a short evidence quote for each, a confidence level, and a flag indicating
+whether the assignment should be treated as provisional pending human confirmation. This
+step is deliberately not implemented as a call to a hosted language-model API; the
+extraction script that produces Stage 3's output is written so that it stops at
+extraction and verification only, leaving classification to be performed and reviewed
+directly rather than automated end-to-end without a human or agent in the loop at the
+point of judgment.
+
+\paragraph{Stage 5: review CSV construction (scripted).} A second script joins the
+classification output back against the domain's paper-list metadata (title, authors,
+publication date) and writes one CSV per domain, with human-readable case labels,
+the evidence quotes, the link-verification outcomes, and a blank verification column.
+
+\paragraph{Parallelization attempt and revision.} Batches were initially handed to
+multiple independent classification agents running concurrently, each reading and
+writing only its own batch's files (no two agents ever touch the same file, avoiding
+write conflicts between them). In practice, all agents launched this way were
+terminated by the same account-wide usage limit before any of them completed a batch,
+so this parallel approach produced no usable output on the run attempted for this
+project. Batches were subsequently processed sequentially instead, which trades
+wall-clock time for the property that a failure partway through affects only the
+batch in progress rather than all of them at once; work already merged from completed
+batches is retained regardless of what happens to a later one.
+
+\paragraph{Human verification.} No classification produced by Stage 4 is treated as
+final on production. Every row is written with its verification column blank; a human
+reviewer subsequently confirms or overrides each case assignment, following the same
+convention already in use elsewhere in this project's review queues (verification
+status recorded separately from the label itself, so the two are never conflated).
+This mirrors the project's broader design principle, applied consistently from the
+candidate-generation stage onward: an ambiguous or low-confidence signal is flagged for
+review rather than silently resolved one way or the other.
+
+\subsection{Domain (content) classification}
+\label{sec:domain-classification}
+
+Independently of the two-axis availability judgment above, every paper is also
+assigned a primary subject pillar based on its actual content --- a separate
+classification task from the pillar under which it was originally retrieved. Two
+domain signals already exist earlier in this pipeline, and neither constitutes genuine
+content classification: the pillar recorded at corpus-construction time
+(Section~\ref{sec:pillar-corpus-construction}) reflects only which keyword search
+happened to retrieve a paper, and the full-text scan (Section~\ref{sec:candidate-list-gen})
+additionally checks whether any of a pillar's keyword strings appear anywhere in a
+paper's full text, which is still substring presence rather than judgment --- a paper
+can accumulate several such tags purely from background citations without being
+substantively about any of them. A paper's true subject can genuinely differ from
+both: a hardware paper that mentions ``optimization algorithm'' only in passing should
+not be tagged \emph{Algorithms} on that basis alone.
+
+Domain classification is performed with the same reading depth and per-paper judgment
+as the availability classification (Section~\ref{sec:framework}), not a reduced or
+heuristic pass: an agent reads a paper's extracted text (or digest, at full-corpus
+scale, per Section~\ref{sec:extraction-classification}) and independently judges which
+one of the six mirrored pillars (Table~\ref{tab:pillars}) the paper is actually about,
+rather than inferring this from keyword presence.
+
+The judgment space for this task is not limited to the six pillars: a paper can also
+be classified as out of scope for quantum computing entirely. This matters
+specifically on the quantum side, where several pillar keywords (e.g.\ ``quantum
+entanglement,'' ``quantum communication,'' ``quantum measurement theory'') are used as
+heavily in non-computing quantum physics --- quantum sensing, quantum foundations,
+quantum optics, quantum networking --- as in quantum computing itself, and the
+corpus-construction procedure (Section~\ref{sec:pillar-corpus-construction}) is
+deliberately kept broad (maximizing recall, per the same design principle already
+applied to the full-text availability scan in Section~\ref{sec:candidate-list-gen})
+rather than pre-filtered for this distinction at pull time. Rather than narrowing the
+query and losing volume, this distinction is deferred to domain classification, reusing
+the out-of-scope category set already established earlier in this project for exactly
+this problem: \emph{Atomic Physics}, \emph{Quantum Sensing}, \emph{Quantum
+Magnonics}, \emph{Quantum Optomechanics}, \emph{Photonic Quantum Computing},
+\emph{Trapped-Ion Computing}, \emph{Neutral-Atom Computing}, \emph{Semiconductor Spin
+Qubits}, and \emph{High Energy Physics}, plus a general \emph{Not Quantum Computing}
+fallback for a paper that does not fit any of the above. A paper assigned one of these
+labels is retained in the corpus (so that corpus size and candidate-generation yield
+remain auditable) but excluded from every subsequent quantum-computing-specific
+statistic, including the pillar-level results this report is ultimately built around.
+No equivalent out-of-scope category is currently defined on the CS side; the same
+question --- whether CS's broad pull similarly needs an out-of-scope carve-out --- is
+tracked as an open item in Section~\ref{sec:planned-extensions}.
+
+For papers not yet classified for
+availability, this judgment is obtained in the same pass as the Axis A/Axis B
+classification --- the same read of the paper's text yields both judgments, avoiding a
+second full read-through of the corpus. For the 3{,}472 quantum papers already
+classified for availability before this domain-classification methodology was adopted
+(Table~\ref{tab:corpus-stats}), a separate backfill pass adds only the primary-domain
+judgment, at the same rigor as if it had been obtained in the combined pass; their
+existing Axis A/Axis B classification, evidence, and confidence fields are left
+unmodified. This backfill is implemented as its own reusable script, applying the same
+deterministic-extraction-plus-agent-classification pattern already established for
+availability classification, so that domain classification can be independently
+re-run in the future (e.g.\ following a revision to the pillar definitions in
+Table~\ref{tab:pillars}) without requiring the availability judgment to be redone. As
+of this writing, this domain-classification methodology has been designed and the
+supporting keyword-list corrections (Section~\ref{sec:keyword-rework}) have been made,
+but neither the backfill pass over the 3{,}472 already-classified quantum papers nor
+the combined-pass classification of the CS corpus has yet been executed.
+
+\subsection{Scope note}
+The samples reported in Section~\ref{sec:results-detail} were classified through direct
+manual review, predating the Stage 3--5 pipeline described in
+Section~\ref{sec:extraction-classification}; that pipeline is intended for scaling
+classification to the full corpus in each domain (Table~\ref{tab:corpus-stats}) going
+forward, following the same procedure and the same framework document applied by hand
+here. As of this writing, Stage 3 has been run against the entire quantum-side corpus
+(all 3{,}478 papers across all six pillars, not only the subset Stage 2 flagged as
+Candidates), and Stage 4 classification of that output is complete for 3{,}472 of
+those 3{,}478 papers (Table~\ref{tab:corpus-stats}) via the batched procedure above;
+this is not yet reflected in Table~\ref{tab:results-quantum}, which remains the
+earlier hand-reviewed pilot sample, and the classified full-corpus results are not yet
+included in this report (see the note at the end of the abstract). This is, in either case, a single-pass
+review that has not yet been
+cross-validated by a second reviewer, and one paper in the working sample (a
+Tsetlin-Machine-based load-monitoring paper) was reviewed for domain classification only
+and is omitted from the results table pending a full data-availability pass.
+
+\section{Classification Framework}
+\label{sec:framework}
+
+\subsection{Axes}
+
+\textbf{Axis A --- External Data.} Whether the paper draws on data that already existed
+independently of the paper --- a pre-collected dataset, real-world records, an
+established benchmark, existing designs or artifacts --- and performs its analysis on
+that.
+
+\textbf{Axis B --- Self-Generated Data.} Whether the paper produces its own data by
+running an experiment, simulation, or generative procedure --- random instance
+generation, physics-based simulation, hardware simulation, training-run outputs, etc.
+--- and performs its analysis on that.
+
+A paper is scored independently on each axis; it may use both, either, or neither. A
+paper is classified as purely theoretical only when \emph{both} axes independently
+return Case 1.
+
+\subsection{Cases (applied identically to both axes)}
+
+\begin{table}[htbp]
+\centering
+\caption{Case definitions}
+\label{tab:cases}
+\begin{tabular}{@{}>{\bfseries}p{2.6cm} p{10.5cm}@{}}
+\toprule
+Case & Definition \\
+\midrule
+Case 1 --- Not present &
+This axis is not applicable to the paper. For Axis A: no external data was used at
+all. For Axis B: no self-generated data was produced at all. \\
+\addlinespace
+Case 2 --- Present, directly accessible &
+The data is named and accompanied by a working access path (URL, DOI, or repository)
+that lets an independent party retrieve the identical material. Ideally version- or
+commit-pinned. \\
+\addlinespace
+Case 3 --- Present, not handed over &
+The data is named, described, or cited, but no access path is given. An independent
+party must locate it themselves using only the name or description provided. \\
+\addlinespace
+Case 4 --- Present, underspecified &
+The data is acknowledged to exist but described too vaguely or incompletely to
+independently identify or reconstruct it --- e.g., missing dataset name/version (Axis
+A), or missing generation parameters/methodology (Axis B). \\
+\addlinespace
+Case 5 --- Claimed accessible, unverifiable &
+The paper explicitly states the data is available and gives a specific access path,
+but that path does not resolve. Distinct from Case 3 in that access was affirmatively
+promised and failed to hold. \\
+\addlinespace
+Case 6 --- Conditional on request &
+The paper states the data will be provided if the authors are contacted directly,
+without any immediate, self-service access path. Distinct from Case 3 (no offer at
+all) and Case 5 (no present-availability claim). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results}
+\label{sec:results-detail}
+
+Table~\ref{tab:results-cs} reports the Axis A and Axis B classification obtained for
+each classical-computing paper reviewed in this pass; Table~\ref{tab:results-quantum}
+(Section~\ref{sec:results-quantum}) reports the same for the matched quantum-computing
+sample.
+
+\subsection{Classical computing sample}
+
+\begin{longtable}{@{}p{4.3cm} p{1.3cm} c c p{5.3cm}@{}}
+\caption{Per-paper data availability classification --- classical computing sample} \label{tab:results-cs} \\
+\toprule
+Paper & arXiv ID & Axis A & Axis B & Note \\
+\midrule
+\endfirsthead
+\toprule
+Paper & arXiv ID & Axis A & Axis B & Note \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+Matrix multiplication exponent (AlphaEvolve) & 2608.16884 & 1 & 1 &
+Pure mathematical optimization over a fixed analytical object; no dataset of any
+kind. \\
+\addlinespace
+MIS/Max-K-SAT convergence & 2608.18910 & 1 & 2 &
+Random graphs/formulas generated by the authors' own code; generator openly linked on
+GitHub. \\
+\addlinespace
+HQC on ARM Cortex-M4 & 2608.18145 & 1 & 1 &
+No dataset; evaluation is cycle-count benchmarking on hardware. Standard KAT test
+vectors are used only for correctness checking, not analysis. \\
+\addlinespace
+Communication-reduction DMPC via LSTM & 2608.17592 & 1 & 3 &
+No external dataset; training data is 2{,}000+ simulated multi-robot scenarios with
+parameters specified in the text, but no code/data repository was located. \\
+\addlinespace
+Convex losses for SVM/SVR/shallow NN & 2608.14288 & 3 & 1 &
+Seven UCI Machine Learning Repository datasets named and tabulated; no direct link
+given in the paper text. \\
+\addlinespace
+SynAct (LLM agent for logic synthesis) & 2608.12751 & 3 & 1 &
+14 open-source RTL designs from OpenCores named as the source; no direct link or
+version given. \\
+\addlinespace
+ARMOR (RTL simulation acceleration) & 2608.08462 & 3 & 1 &
+Designs generated via TensorLib/Chipyard/RocketChip/BOOM/Gemmini, named but not
+linked; the paper's own code repository exists but states it is embargoed until after
+MICRO 2026. \\
+\addlinespace
+Fraudulent banking operations recognition & 2608.07471 & 2 & 1 &
+Credit Card Fraud Detection dataset (Kaggle, ULB) with a working direct URL given in
+an explicit Data Availability Statement. \\
+\addlinespace
+Synthetic LiDAR data generation & 2608.07106 & 3 & 2 &
+Base CAD models drawn from the existing ModelNet dataset (named, not directly linked
+in text); the physics-simulated LiDAR dataset the authors derive from it is
+separately released with a working Zenodo DOI. \\
+\addlinespace
+MiCoPro (mixed-precision HW/SW co-design) & 2608.06916 & 3 & 1 &
+Six standard ML benchmarks (CIFAR-10/100, MNIST, ImageNet, Speech Commands V2,
+TinyStories) named and cited by reference number, not linked; the authors' own
+framework code is separately linked on GitHub. \\
+\addlinespace
+PDMarks (physical-design IP watermarking) & 2608.05055 & 2 & 1 &
+Eight open-source RTL benchmarks drawn from OpenROAD-related repositories, linked
+with pinned commit hashes. \\
+\addlinespace
+Generalized Quadratic Gradient & 2608.01552 & 3 & 5 &
+Several real datasets named only in figure captions, with no citation or link in the
+body text; the paper's own experiment code is explicitly claimed to be ``openly
+available'' at a GitHub URL that was verified to return a 404. \\
+\addlinespace
+Signum-based distributed optimization/ML & 2608.01220 & 2 & 6 &
+MNIST (external) is linked directly via Kaggle in a Data Availability Statement; the
+authors' own raw simulation output (from a self-generated synthetic regression
+example) is stated to be available only ``upon request.'' \\
+\addlinespace
+Domain-adaptive Deep JSCC & 2607.28907 & 3 & 1 &
+SVHN, MNIST, and PACS named and cited by reference number, not linked in text; the
+authors' own code repository is real and functional, and auto-downloads MNIST only ---
+SVHN and PACS still require the reader to independently source and stage the raw
+files. \\
+
+\end{longtable}
+
+\subsection{Quantum computing sample}
+\label{sec:results-quantum}
+
+Table~\ref{tab:results-quantum} reports the same classification for a matched sample of
+fourteen papers drawn from the superconducting-qubit review queue
+(Section~\ref{sec:quantum-list-gen}).
+
+\begin{longtable}{@{}p{4.3cm} p{1.3cm} c c p{5.3cm}@{}}
+\caption{Per-paper data availability classification --- quantum computing sample} \label{tab:results-quantum} \\
+\toprule
+Paper & arXiv ID & Axis A & Axis B & Note \\
+\midrule
+\endfirsthead
+\toprule
+Paper & arXiv ID & Axis A & Axis B & Note \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+Flip-chip integrated SC qubits & 2608.07306 & 1 & 2 &
+No external dataset; own fabrication/measurement data and processing code both
+directly linked (4TU data repository DOI and GitHub, cited as numbered references). \\
+\addlinespace
+Component-level inverse design of transmon qubits & 2607.20795 & 3 & 2 &
+Training data derived from the external SQuADDS database, named but not directly
+linked in this paper's own text; the authors' own processed splits, scalers, and
+trained model weights are directly available in a linked GitHub repository. \\
+\addlinespace
+Radiopurity assays for SC qubits at SNOLAB & 2607.16151 & 1 & 2 &
+No external dataset used as an analysis input; the paper's own newly-measured
+material-radioactivity assay data is deposited in and directly accessible from the
+community database radiopurity.org (verified live). \\
+\addlinespace
+Real-time charge-jump detection (CNN) & 2607.14293 & 1 & 3 &
+No external dataset; own training data (Ramsey tomography scans from NEXUS
+measurements) is described in the text but no access path of any kind is given. \\
+\addlinespace
+Kibble-Zurek excitations on a 5,564-qubit annealer & 2607.13842 & 1 & 2 &
+No external dataset; own quantum-annealer and matrix-product-state simulation data
+directly deposited on Zenodo with a working DOI. \\
+\addlinespace
+Plaquette (FTQC hardware-aware design platform) & 2607.08767 & 1 & 6 &
+No external dataset identified in the available text; the paper's own data is stated
+to be available only ``from the authors upon reasonable request'' -- the platform
+itself is separately noted to be a commercial product with its own restricted access
+terms. \\
+\addlinespace
+Pauli-propagation noise-canceling observables & 2606.20441 & 1 & 3 &
+No explicit data-availability statement of any kind located; two GitHub links present
+are official Qiskit-organization repositories rather than a confirmed own-data
+release, so self-generated data (if any) is treated as described-but-unconfirmed. \\
+\addlinespace
+Non-perturbative CPMG scaling (EmuPlat) & 2603.29525 & 1 & 2 &
+No external dataset; own simulation data and scripts stated to be available now at a
+GitHub repository (the base repository resolves; the specific cited sub-path returns
+404). A more permanent archival copy is separately stated to be deposited ``upon
+acceptance,'' i.e.\ not yet live at time of review. \\
+\addlinespace
+Charge-parity detection via randomized benchmarking & 2604.02809 & 1 & 2 &
+No external dataset; own source data files directly linked via a working Figshare DOI,
+with additional (unspecified) data available only upon request -- a partial release
+rather than a complete one. \\
+\addlinespace
+Lattice-renormalized tunneling models for qubit materials & 2512.18156 & 1 & 5 &
+No external dataset; own simulation data explicitly claimed available, but the cited
+Dryad DOI is a literal placeholder (\texttt{10.5061/dryad.XXXXXXXXX}) that does not
+resolve to any record. \\
+\addlinespace
+Magnon squeezing in the quantum regime & 2602.19671 & 1 & 2 &
+No external dataset; own source data for the figures directly deposited on Zenodo
+(verified live), with additional information available only upon request -- partial
+but the core figure data is genuinely open. \\
+\addlinespace
+Resist-free shadow deposition for JJ fabrication & 2604.09796 & 1 & 2 &
+No external dataset; own fabrication and measurement data openly available at a
+working Zenodo DOI. \\
+\addlinespace
+LLM-assisted superconducting qubit experiments (HAL) & 2603.08801 & 1 & 2 &
+No external dataset; the paper's own control-software framework (HAL) and its
+supporting tools (Grapher, QuICK) are all self-citations to the same lab's own prior
+open-source releases, all independently verifiable on GitHub -- though specific
+experimental-result data from the demonstration itself is not separately addressed. \\
+\addlinespace
+Scalable open-source QEC decoding system & 2603.16203 & 1 & 3 &
+No external dataset; the paper is framed as ``open-source'' and a plausibly-own
+repository (EosCore) was located, but no explicit data/code availability statement
+confirming this was found in the reviewed text. \\
+
+\end{longtable}
+
+\section{Summary of Observations}
+
+\subsection{Classical computing sample}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Case 3 (``named, not handed over'') is the modal outcome for Axis
+    A} in this sample: six of the papers that use external data cite it by name only,
+    leaving retrieval entirely to the reader.
+    \item \textbf{Only two papers achieve Case 2 on Axis A with the strongest form of
+    reproducibility} --- a direct, working link. Of these, only one (PDMarks) pins the
+    reference to an exact commit hash, guaranteeing a byte-identical copy regardless of
+    future changes to the upstream repository.
+    \item \textbf{Two papers make an explicit availability claim that does not hold up
+    under verification} (Case 5) or resolves only to a conditional promise rather than
+    an immediate path (Case 6). Both were only detected as such because the stated
+    access paths were independently checked rather than taken at face value ---
+    underscoring that a stated ``available at ...'' claim is not equivalent to verified
+    availability.
+    \item \textbf{Self-generated data (Axis B) is comparatively rare} in this sample
+    and, when present, is unevenly documented: one paper links its generator code
+    directly (Case 2), one paper describes its generation procedure but links nothing
+    (Case 3), and two papers leave their own generated output only conditionally or
+    unverifiably accessible (Cases 5 and 6).
+    \item \textbf{No paper in this sample returned Case 1 on both axes except the
+    purely mathematical optimization paper}, consistent with the expectation that
+    Case-1/Case-1 should be reserved for papers with no empirical component at all.
+\end{itemize}
+
+\subsection{Quantum computing sample}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Axis A is overwhelmingly Case 1 in this sample} --- thirteen of the
+    fourteen papers use no external dataset at all; the sole exception (the
+    transmon-design paper) names its external source (SQuADDS) without a direct link in
+    the reviewed text. This is the sharpest structural difference from the classical
+    sample, where external-data use (Cases 2--6 on Axis A) was the norm rather than the
+    exception.
+    \item \textbf{Axis B (self-generated data) is where nearly all the variation in this
+    sample lives}, since almost every paper reports its own newly fabricated,
+    measured, or simulated data. Eight of fourteen papers reach Case 2 (directly
+    accessible), consistent with a real, if inconsistently applied, community norm of
+    depositing experimental data to Zenodo or an institutional repository under a
+    formal ``Data availability'' heading.
+    \item \textbf{Partial releases (data linked, with additional data gated behind a
+    request) appear three times} (charge-parity detection, magnon squeezing, and,
+    differently, the CPMG-scaling paper's pending archival deposit) --- distinct from
+    the classical sample, where a request-only outcome (Case 6) was typically total
+    rather than partial.
+    \item \textbf{One paper's stated access path is a literal unassigned placeholder}
+    (\texttt{10.5061/dryad.XXXXXXXXX}) rather than a broken but once-valid link, a
+    distinct failure mode from the classical sample's 404'd GitHub URL: here the paper
+    was evidently submitted before the archival deposit was even created, not merely
+    before its retrieval was verified.
+    \item \textbf{Self-citation to a lab's own prior open-source tooling} (as opposed to
+    releasing new data specific to the paper at hand) appears in this sample (the
+    LLM-assisted-experiments paper, citing its own group's HAL/Grapher/QuICK releases)
+    and was also observed repeatedly in the broader superconducting-qubit review queue
+    beyond this fourteen-paper sample --- a citation style that reads, on first pass, like
+    a third-party tool reference and requires checking the citing lab's identity against
+    the repository owner to correctly attribute.
+\end{itemize}
+
+\subsection{Cross-domain comparison}
+
+Read together, the two samples suggest that the two computing communities structure
+their data-availability problem differently rather than simply exhibiting different
+overall care. The classical sample's difficulty is overwhelmingly an Axis A problem:
+papers routinely build on named, citable, but unlinked external benchmarks and
+datasets. The quantum sample's difficulty is instead concentrated in Axis B: since these
+papers almost always generate their own new experimental or simulated data, the
+practice being tested is not ``did you cite your source'' but ``did you actually deposit
+what you produced,'' and the sample shows a genuine, if partial and unevenly applied,
+norm of doing so (Case 2 on Axis B in 8/14 papers). A same-shape comparison across the
+full review queues, once both are fully verified, is needed before this observation can
+be treated as more than suggestive --- both samples reported here are small,
+non-random, hand-selected subsets chosen for outcome diversity rather than
+representativeness (see Limitations).
+
+\section{Planned Extensions}
+\label{sec:planned-extensions}
+
+This section tracks methodology changes that have been decided on but not yet
+executed, identified while reviewing this report's description of the pipeline against
+what the pipeline should actually do. It is expected to grow as further review surfaces
+further such directions; each entry stays here until the corresponding pipeline change
+has been made and the rest of this report updated to reflect it.
+
+\subsection{Unify Hardware-pillar corpus construction with the common procedure}
+\label{sec:planned-hardware-unification}
+
+As noted in Section~\ref{sec:candidate-generation}, the quantum-side Hardware pillar is
+currently built by a separate, older two-source procedure (arXiv plus Crossref
+cross-referencing against seven target journals) rather than the common per-pillar
+arXiv query procedure used by every other pillar on both sides --- an inconsistency
+left over from before the six-pillar comparison architecture existed, not a deliberate
+design choice. The two-source method is, if anything, more thorough than the common
+procedure (it additionally catches journal-only publications with no arXiv preprint),
+so the fix is to extend it outward rather than to drop it: the Crossref
+cross-referencing step will be added to the common per-pillar procedure
+(Section~\ref{sec:pillar-corpus-construction}) for every pillar on both sides, using
+each pillar's own keyword list and an appropriately chosen set of target journals,
+rather than rebuilding the Hardware pillar under the weaker arXiv-only method it was
+originally exempted from.
+
+This extension will be applied even to pillars, and specifically to the quantum
+Hardware pillar, that already have completed classification work
+(Table~\ref{tab:corpus-stats}). Any additional papers the Crossref cross-referencing
+step finds beyond what is already in a pillar's corpus will be deduplicated against the
+existing corpus by arXiv identifier (and, for journal-only records with no arXiv
+identifier, by the same fuzzy title-matching procedure already used in
+Section~\ref{sec:quantum-list-gen}) and added to it; no paper already in a corpus, and
+no classification already completed against it, will be removed or discarded as a
+result of this extension. This follows the same additive-only principle already
+applied to the keyword-list rework (Section~\ref{sec:keyword-rework}): a corpus-widening
+change should only ever add coverage, never retract it.
+
+\subsection{Decide whether CS needs an out-of-scope category analogous to quantum's}
+\label{sec:planned-cs-out-of-scope}
+
+Section~\ref{sec:domain-classification} resolves the quantum side's
+computing-vs-physics scope question by classifying out-of-scope papers into an
+existing set of non-computing labels (\emph{Quantum Sensing}, \emph{Atomic Physics},
+etc.) at the domain-classification stage, rather than restricting the corpus-pull
+query and losing recall. Whether the CS side has an analogous problem --- a keyword
+matching a paper that is not really about the intended pillar's subject at all, as
+opposed to a paper that is on-topic but assigned to the wrong one of the six pillars
+--- has not yet been assessed. A candidate example: ``channel capacity'' and
+``information theoretic limit'' (CS info\_theory) are both used extensively in pure
+information-theory mathematics and in communications-engineering work with no
+connection to computing. This needs the same kind of review the quantum side already
+received before deciding whether CS's domain classifier needs its own out-of-scope
+label set, and if so, what it should contain.
+
+\section{Limitations}
+
+This pass reflects a single reviewer's manual reading of each paper and has not been
+cross-checked by a second coder; category boundaries (particularly between Case 3 and
+Case 4) required judgment calls that a second reviewer might resolve differently.
+Link verification was performed once, at the time of review, and some URLs may change
+status afterward. The Tsetlin-Machine load-monitoring paper in the working CS sample was
+not carried through the full data-availability procedure and is therefore omitted from
+Table~\ref{tab:results-cs} rather than assigned a placeholder classification. Both the
+classical and quantum samples reported here (fourteen papers each) are small,
+non-random subsets of their respective review queues (380 CS candidates and 235
+quantum candidates), hand-selected for outcome diversity rather than drawn at random,
+and should not be treated as representative of those queues, of the six pillars on
+either side as a whole, or of the quantum-vs-classical comparison this pipeline is
+ultimately intended to support. The quantum sample is drawn entirely from the Hardware
+pillar; the cross-domain comparison in Section~\ref{sec:results-quantum} should
+accordingly be read as Hardware-pillar-only and may not generalize to the other five
+quantum pillars.
+
+Beyond the pilot-sample limitations above, three pieces of work described in this
+report are designed but not yet executed, and every corpus size and classification
+count given here should be read with that in mind. First, the quantum-side pillar
+corpus has not yet been re-pulled with the pagination fix and keyword-list rework
+described in Sections~\ref{sec:pillar-corpus-construction}
+and~\ref{sec:keyword-rework}; the 3{,}478-paper figure and the 3{,}472 papers already
+classified against it (Table~\ref{tab:corpus-stats}) both predate that correction, and
+the corrected corpus is expected to be several times larger (an approximate
+raw estimate places it at 13{,}800--14{,}000 papers). Second, the CS-side corpus
+(6{,}308 papers) reflects the pagination fix but not the keyword-list rework, and has
+not yet been through any stage of classification. Third, the domain-classification
+methodology (Section~\ref{sec:domain-classification}) has been designed but neither
+its backfill pass over the already-classified quantum papers nor its combined-pass
+application to new classification work has been run. None of the numbers in
+Table~\ref{tab:corpus-stats} or Section~\ref{sec:results-detail} should be treated as
+final until these three steps are complete and reflected in an updated version of this
+report, which is also where the full-corpus results tables and the corpus-construction
+diagnostic tables (Table~\ref{tab:keyword-rework} and the underlying true-total
+analysis) will be added.
+
+\end{document}

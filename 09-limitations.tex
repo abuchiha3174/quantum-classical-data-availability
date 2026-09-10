@@ -1,0 +1,38 @@
+\section{Limitations}
+
+This pass reflects a single reviewer's manual reading of each paper and has not been
+cross-checked by a second coder; category boundaries (particularly between Case 3 and
+Case 4) required judgment calls that a second reviewer might resolve differently.
+Link verification was performed once, at the time of review, and some URLs may change
+status afterward. The Tsetlin-Machine load-monitoring paper in the working CS sample was
+not carried through the full data-availability procedure and is therefore omitted from
+Table~\ref{tab:results-cs} rather than assigned a placeholder classification. Both the
+classical and quantum samples reported here (fourteen papers each) are small,
+non-random subsets of their respective review queues (380 CS candidates and 235
+quantum candidates), hand-selected for outcome diversity rather than drawn at random,
+and should not be treated as representative of those queues, of the six pillars on
+either side as a whole, or of the quantum-vs-classical comparison this pipeline is
+ultimately intended to support. The quantum sample is drawn entirely from the Hardware
+pillar; the cross-domain comparison in Section~\ref{sec:results-quantum} should
+accordingly be read as Hardware-pillar-only and may not generalize to the other five
+quantum pillars.
+
+Beyond the pilot-sample limitations above, three pieces of work described in this
+report are designed but not yet executed, and every corpus size and classification
+count given here should be read with that in mind. First, the quantum-side pillar
+corpus has not yet been re-pulled with the pagination fix and keyword-list rework
+described in Sections~\ref{sec:pillar-corpus-construction}
+and~\ref{sec:keyword-rework}; the 3{,}478-paper figure and the 3{,}472 papers already
+classified against it (Table~\ref{tab:corpus-stats}) both predate that correction, and
+the corrected corpus is expected to be several times larger (an approximate
+raw estimate places it at 13{,}800--14{,}000 papers). Second, the CS-side corpus
+(6{,}308 papers) reflects the pagination fix but not the keyword-list rework, and has
+not yet been through any stage of classification. Third, the domain-classification
+methodology (Section~\ref{sec:domain-classification}) has been designed but neither
+its backfill pass over the already-classified quantum papers nor its combined-pass
+application to new classification work has been run. None of the numbers in
+Table~\ref{tab:corpus-stats} or Section~\ref{sec:results-detail} should be treated as
+final until these three steps are complete and reflected in an updated version of this
+report, which is also where the full-corpus results tables and the corpus-construction
+diagnostic tables (Table~\ref{tab:keyword-rework} and the underlying true-total
+analysis) will be added.

@@ -1,0 +1,54 @@
+\section{Planned Extensions}
+\label{sec:planned-extensions}
+
+This section tracks methodology changes that have been decided on but not yet
+executed, identified while reviewing this report's description of the pipeline against
+what the pipeline should actually do. It is expected to grow as further review surfaces
+further such directions; each entry stays here until the corresponding pipeline change
+has been made and the rest of this report updated to reflect it.
+
+\subsection{Unify Hardware-pillar corpus construction with the common procedure}
+\label{sec:planned-hardware-unification}
+
+As noted in Section~\ref{sec:candidate-generation}, the quantum-side Hardware pillar is
+currently built by a separate, older two-source procedure (arXiv plus Crossref
+cross-referencing against seven target journals) rather than the common per-pillar
+arXiv query procedure used by every other pillar on both sides --- an inconsistency
+left over from before the six-pillar comparison architecture existed, not a deliberate
+design choice. The two-source method is, if anything, more thorough than the common
+procedure (it additionally catches journal-only publications with no arXiv preprint),
+so the fix is to extend it outward rather than to drop it: the Crossref
+cross-referencing step will be added to the common per-pillar procedure
+(Section~\ref{sec:pillar-corpus-construction}) for every pillar on both sides, using
+each pillar's own keyword list and an appropriately chosen set of target journals,
+rather than rebuilding the Hardware pillar under the weaker arXiv-only method it was
+originally exempted from.
+
+This extension will be applied even to pillars, and specifically to the quantum
+Hardware pillar, that already have completed classification work
+(Table~\ref{tab:corpus-stats}). Any additional papers the Crossref cross-referencing
+step finds beyond what is already in a pillar's corpus will be deduplicated against the
+existing corpus by arXiv identifier (and, for journal-only records with no arXiv
+identifier, by the same fuzzy title-matching procedure already used in
+Section~\ref{sec:quantum-list-gen}) and added to it; no paper already in a corpus, and
+no classification already completed against it, will be removed or discarded as a
+result of this extension. This follows the same additive-only principle already
+applied to the keyword-list rework (Section~\ref{sec:keyword-rework}): a corpus-widening
+change should only ever add coverage, never retract it.
+
+\subsection{Decide whether CS needs an out-of-scope category analogous to quantum's}
+\label{sec:planned-cs-out-of-scope}
+
+Section~\ref{sec:domain-classification} resolves the quantum side's
+computing-vs-physics scope question by classifying out-of-scope papers into an
+existing set of non-computing labels (\emph{Quantum Sensing}, \emph{Atomic Physics},
+etc.) at the domain-classification stage, rather than restricting the corpus-pull
+query and losing recall. Whether the CS side has an analogous problem --- a keyword
+matching a paper that is not really about the intended pillar's subject at all, as
+opposed to a paper that is on-topic but assigned to the wrong one of the six pillars
+--- has not yet been assessed. A candidate example: ``channel capacity'' and
+``information theoretic limit'' (CS info\_theory) are both used extensively in pure
+information-theory mathematics and in communications-engineering work with no
+connection to computing. This needs the same kind of review the quantum side already
+received before deciding whether CS's domain classifier needs its own out-of-scope
+label set, and if so, what it should contain.

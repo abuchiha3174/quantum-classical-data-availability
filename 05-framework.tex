@@ -1,0 +1,59 @@
+\section{Classification Framework}
+\label{sec:framework}
+
+\subsection{Axes}
+
+\textbf{Axis A --- External Data.} Whether the paper draws on data that already existed
+independently of the paper --- a pre-collected dataset, real-world records, an
+established benchmark, existing designs or artifacts --- and performs its analysis on
+that.
+
+\textbf{Axis B --- Self-Generated Data.} Whether the paper produces its own data by
+running an experiment, simulation, or generative procedure --- random instance
+generation, physics-based simulation, hardware simulation, training-run outputs, etc.
+--- and performs its analysis on that.
+
+A paper is scored independently on each axis; it may use both, either, or neither. A
+paper is classified as purely theoretical only when \emph{both} axes independently
+return Case 1.
+
+\subsection{Cases (applied identically to both axes)}
+
+\begin{table}[htbp]
+\centering
+\caption{Case definitions}
+\label{tab:cases}
+\begin{tabular}{@{}>{\bfseries}p{2.6cm} p{10.5cm}@{}}
+\toprule
+Case & Definition \\
+\midrule
+Case 1 --- Not present &
+This axis is not applicable to the paper. For Axis A: no external data was used at
+all. For Axis B: no self-generated data was produced at all. \\
+\addlinespace
+Case 2 --- Present, directly accessible &
+The data is named and accompanied by a working access path (URL, DOI, or repository)
+that lets an independent party retrieve the identical material. Ideally version- or
+commit-pinned. \\
+\addlinespace
+Case 3 --- Present, not handed over &
+The data is named, described, or cited, but no access path is given. An independent
+party must locate it themselves using only the name or description provided. \\
+\addlinespace
+Case 4 --- Present, underspecified &
+The data is acknowledged to exist but described too vaguely or incompletely to
+independently identify or reconstruct it --- e.g., missing dataset name/version (Axis
+A), or missing generation parameters/methodology (Axis B). \\
+\addlinespace
+Case 5 --- Claimed accessible, unverifiable &
+The paper explicitly states the data is available and gives a specific access path,
+but that path does not resolve. Distinct from Case 3 in that access was affirmatively
+promised and failed to hold. \\
+\addlinespace
+Case 6 --- Conditional on request &
+The paper states the data will be provided if the authors are contacted directly,
+without any immediate, self-service access path. Distinct from Case 3 (no offer at
+all) and Case 5 (no present-availability claim). \\
+\bottomrule
+\end{tabular}
+\end{table}
