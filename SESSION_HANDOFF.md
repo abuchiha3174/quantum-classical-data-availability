@@ -8,6 +8,11 @@ are used: `superconducting_qubits_review/` (this repo's root).
 **This file replaces `HANDOVER.md`, which is stale (describes a pipeline design from
 before the current one) — see the notice at the top of that file. Read this one.**
 
+**For a literal, paste-into-Claude-Code prompt to resume classification** (exact
+schema, rules, stop conditions, hard constraints — not just narrative overview), see
+`AGENT_RESUME_PROMPT.md` instead. This file is the human-readable context; that one is
+the machine-actionable instruction set.
+
 ## The pipeline, as it currently exists
 
 1. **Corpus retrieval** (`scripts/build_full_category_corpus.py`) — pulls every paper
