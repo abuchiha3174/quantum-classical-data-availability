@@ -56,7 +56,7 @@ def main():
         print(f"{csv_path} not found -- run build_axis_case_csv.py {group} first")
         sys.exit(1)
 
-    with open(csv_path, newline="") as f:
+    with open(csv_path, newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
     if not rows:
         print(f"{csv_path} is empty")

@@ -100,7 +100,7 @@ def main():
             meta[p["arxiv_id"]] = p  # later sources win on conflict
 
     out_path = DATA_DIR / f"{group}_axis_case_review.csv"
-    with open(out_path, "w", newline="") as f:
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(HEADER)
         for aid, r in axis_results.items():
