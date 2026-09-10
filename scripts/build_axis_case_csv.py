@@ -82,12 +82,22 @@ def main():
         print(f"no results in {axis_cache_path} -- run axis_case_classifier.py --group {group} first")
         sys.exit(1)
 
-    # Pull title/author/date metadata from whichever paper list has it --
-    # the pillar list for pillar-based groups, or the original merged list
-    # for a plain superconducting-qubit-only run.
-    pillar_list_path = latest_pillar_list(group)
-    meta_source = pillar_list_path if pillar_list_path else (CACHE / "merged_papers.jsonl")
-    meta = {p["arxiv_id"]: p for p in load_jsonl(meta_source)}
+    # Pull title/author/date metadata. The current, comprehensive source is
+    # the full category-based corpus -- every paper that can be classified
+    # was extracted from it, so it should cover ~all cases. The legacy
+    # pillar list and merged_papers.jsonl are checked first and merged in
+    # underneath it (full-corpus entries win on conflict), only to cover the
+    # rare paper predating the full-corpus pull that isn't in it. Bug fixed
+    # 2026-09-10: this used to check ONLY the pillar list, which left 97% of
+    # CS rows with a blank title/author/date because most classified CS
+    # papers came from the full-corpus pull, not the old pillar-based one.
+    meta = {}
+    for source in (CACHE / "merged_papers.jsonl", latest_pillar_list(group),
+                   DATA_DIR / f"{group}_full_category_corpus.jsonl"):
+        if source is None:
+            continue
+        for p in load_jsonl(source):
+            meta[p["arxiv_id"]] = p  # later sources win on conflict
 
     out_path = DATA_DIR / f"{group}_axis_case_review.csv"
     with open(out_path, "w", newline="") as f:

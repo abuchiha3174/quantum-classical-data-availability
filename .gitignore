@@ -25,6 +25,10 @@ __pycache__/
 # OS
 .DS_Store
 
+# Stray scratch files from earlier sessions, not part of the current pipeline
+pipeline_atlas.html
+qb3_classifications.jsonl
+
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
